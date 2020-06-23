@@ -7,6 +7,6 @@ setuptools.setup(
     author_email="ao@ot.co",
     description="ODIN",
     packages=setuptools.find_packages(),
-    install_requires=['numpy', 'scipy', 'tensorflow'],
+    install_requires=['numpy', 'scipy', 'tensorflow==1.13.*'],
     classifiers=(
         "Programming Language :: Python :: 3"),)

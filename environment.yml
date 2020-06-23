@@ -1,0 +1,10 @@
+name: tf1
+channels:
+  - defaults
+  - conda-forge
+  - anaconda
+dependencies:
+  - numpy
+  - python=3.7.0
+  - scipy
+  - tensorflow=1.13.1
