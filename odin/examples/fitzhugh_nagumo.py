@@ -8,6 +8,7 @@ February 2019
 
 
 # Import libraries
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from odin import FitzHughNagumo
@@ -16,7 +17,7 @@ from odin import ODIN
 
 
 # Fix the random seeds for reproducibility
-seed = 3298514
+seed = 5555
 np.random.seed(seed)
 tf.set_random_seed(seed)
 
@@ -27,13 +28,13 @@ tf.set_random_seed(seed)
 # Simulate the data
 fitzhugh_nagumo_simulator = FitzHughNagumo(true_param=(0.2, 0.2, 3.0),
                                            noise_variance=0.0,
-                                           stn_ratio=100.0)
+                                           stn_ratio=10)
 system_obs, t_obs =\
     fitzhugh_nagumo_simulator.observe(initial_state=(-1.0, 1.0),
                                       initial_time=0.0,
                                       final_time=10.0,
-                                      t_delta_integration=0.01,
-                                      t_delta_observation=0.5)
+                                      t_delta_integration=0.1,
+                                      t_delta_observation=0.1)
 n_states, n_points = system_obs.shape
 
 
@@ -61,11 +62,21 @@ odin_optimizer = ODIN(trainable_fitzhugh_nagumo,
                       single_gp=False,  # Here we use one GP per state
                       basinhopping=True,  # Basinhopping activated
                       basinhopping_options={'n_iter': 10},  # Set 10 iterations
-                      time_normalization=True,  # time normalization on
+                      time_normalization=False,  # time normalization on
                       state_normalization=True)  # states normalization on
 
 # Build the model
 odin_optimizer.build_model()
 
 # Fit the model
-final_theta, final_gamma, final_x = odin_optimizer.fit()
+final_theta, final_gamma, final_x, mean, gp_vars = odin_optimizer.fit()
+print(final_theta)
+print(gp_vars)
+for i, (st, x) in enumerate(zip(mean, final_x)):
+    plt.figure()
+    plt.title(f'GP mean {i}')
+    plt.plot(st)
+    plt.figure()
+    plt.title(f'State {i}')
+    plt.plot(x)
+plt.show()

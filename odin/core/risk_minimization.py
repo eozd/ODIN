@@ -274,7 +274,7 @@ class ODIN(object):
         that will later be optimized.
         """
         with tf.variable_scope('risk_main'):
-            self.x = tf.Variable(self.system,
+            self.x = tf.Variable(tf.random.normal([self.n_states, self.n_p], dtype=tf.float64),
                                  dtype=tf.float64, trainable=True,
                                  name='states')
             if self.single_gp:
@@ -379,6 +379,7 @@ class ODIN(object):
                                         self.trainable.parameter_upper_bounds),
                          risk_vars[1]: (self.state_lower_bounds,
                                         self.state_upper_bounds)}
+        # Dictionary construction
         if self.train_gamma:
             var_to_bounds[risk_vars[2]] = (self.gamma_bounds[0],
                                            self.gamma_bounds[1])
@@ -434,7 +435,7 @@ class ODIN(object):
         with session:
             session.run(self.init)
             self._train_data_based_gp(session)
-            self._initialize_states_with_mean_gp(session)
+            # self._initialize_states_with_mean_gp(session)
             if self.basinhopping:
                 self.risk_optimizer.basinhopping(session,
                                                  **self.basinhopping_options)
@@ -444,5 +445,11 @@ class ODIN(object):
             gamma = session.run(self.gamma).reshape(-1)
             x = session.run(tf.squeeze(self.x) * self.system_std_dev
                             + self.system_means)
+            mean = session.run(tf.squeeze(self.gaussian_process.compute_posterior_mean(self.system)))
+            gp_vars = session.run([
+                tf.exp(self.gaussian_process.likelihood_logvariances),
+                tf.exp(self.gaussian_process.kernel.log_variances),
+                tf.exp(self.gaussian_process.kernel.log_lengthscales)
+            ])
         tf.reset_default_graph()
-        return theta, gamma, x
+        return theta, gamma, x, mean, gp_vars

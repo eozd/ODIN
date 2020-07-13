@@ -8,6 +8,7 @@ February 2019
 
 
 # Import libraries
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from odin import LotkaVolterra
@@ -16,7 +17,7 @@ from odin import ODIN
 
 
 # Fix the random seeds for reproducibility
-seed = 3298514
+seed = 5555
 np.random.seed(seed)
 tf.set_random_seed(seed)
 
@@ -25,13 +26,13 @@ tf.set_random_seed(seed)
 #    the Lotka - Volterra model
 
 lotka_volterra_simulator = LotkaVolterra(true_param=(2.0, 1.0, 4.0, 1.0),
-                                         noise_variance=0.1**2)
+                                         noise_variance=0.1)
 
 system_obs, t_obs = lotka_volterra_simulator.observe(initial_state=(5.0, 3.0),
                                                      initial_time=0.0,
-                                                     final_time=2.0,
+                                                     final_time=3.0,
                                                      t_delta_integration=0.01,
-                                                     t_delta_observation=0.1)
+                                                     t_delta_observation=0.05)
 
 n_states, n_points = system_obs.shape
 
@@ -63,7 +64,7 @@ odin_optimizer = ODIN(trainable_lotka_volterra,
                       initial_gamma=1.0,  # initial gamma value
                       train_gamma=True,  # gamma will be trained as well
                       state_bounds=state_bounds,  # Pass the state bounds
-                      single_gp=True,  # we use one set of HP for both states
+                      single_gp=False,  # we use one set of HP for both states
                       basinhopping=False,  # we don't use the basinhopping here
                       time_normalization=True,  # time normalization on
                       state_normalization=True)  # states normalization on
@@ -72,4 +73,14 @@ odin_optimizer = ODIN(trainable_lotka_volterra,
 odin_optimizer.build_model()
 
 # Fit the model
-final_theta, final_gamma, final_x = odin_optimizer.fit()
+final_theta, final_gamma, final_x, mean, gp_vars = odin_optimizer.fit()
+print(final_theta)
+print(gp_vars)
+for i, (st, x) in enumerate(zip(mean, final_x)):
+    plt.figure()
+    plt.title(f'GP mean {i}')
+    plt.plot(st)
+    plt.figure()
+    plt.title(f'State {i}')
+    plt.plot(x)
+plt.show()
