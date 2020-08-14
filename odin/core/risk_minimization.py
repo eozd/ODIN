@@ -274,7 +274,7 @@ class ODIN(object):
         that will later be optimized.
         """
         with tf.variable_scope('risk_main'):
-            self.x = tf.Variable(tf.random.normal([self.n_states, self.n_p], dtype=tf.float64),
+            self.x = tf.Variable(self.system,
                                  dtype=tf.float64, trainable=True,
                                  name='states')
             if self.single_gp:
@@ -434,8 +434,35 @@ class ODIN(object):
         session = tf.Session()
         with session:
             session.run(self.init)
-            self._train_data_based_gp(session)
-            # self._initialize_states_with_mean_gp(session)
+
+            try:
+                vars = [
+                    self.gaussian_process.kernel.log_lengthscales,
+                    self.gaussian_process.kernel.log_variances,
+                    self.gaussian_process.likelihood_logvariances,
+                ]
+            except AttributeError:
+                vars = [
+                    self.gaussian_process.kernel.log_a,
+                    self.gaussian_process.kernel.log_b,
+                    self.gaussian_process.kernel.log_variances,
+                    self.gaussian_process.likelihood_logvariances,
+                ]
+            best_ML = -np.inf
+            best_vars = None
+            for _ in range(20):
+                for var in vars:
+                    z = tf.abs(tf.random.normal(var.shape, dtype=tf.float64))
+                    session.run(tf.assign(var, tf.math.log(z)))
+                self._train_data_based_gp(session)
+                curr_ML = -session.run(self.negative_data_loglikelihood)
+                if curr_ML > best_ML:
+                    best_ML = curr_ML
+                    best_vars = session.run(vars)
+            for var, best_var in zip(vars, best_vars):
+                session.run(tf.assign(var, best_var))
+
+            self._initialize_states_with_mean_gp(session)
             if self.basinhopping:
                 self.risk_optimizer.basinhopping(session,
                                                  **self.basinhopping_options)
@@ -445,11 +472,19 @@ class ODIN(object):
             gamma = session.run(self.gamma).reshape(-1)
             x = session.run(tf.squeeze(self.x) * self.system_std_dev
                             + self.system_means)
-            mean = session.run(tf.squeeze(self.gaussian_process.compute_posterior_mean(self.system)))
-            gp_vars = session.run([
-                tf.exp(self.gaussian_process.likelihood_logvariances),
-                tf.exp(self.gaussian_process.kernel.log_variances),
-                tf.exp(self.gaussian_process.kernel.log_lengthscales)
-            ])
+            try:
+                gp_vars = session.run([
+                    tf.math.exp(self.gaussian_process.kernel.log_lengthscales),
+                    tf.math.exp(self.gaussian_process.kernel.log_variances),
+                    tf.math.exp(self.gaussian_process.likelihood_logvariances),
+                ])
+            except AttributeError:
+                gp_vars = session.run([
+                    tf.math.exp(self.gaussian_process.kernel.log_a),
+                    tf.math.exp(self.gaussian_process.kernel.log_b),
+                    tf.math.exp(self.gaussian_process.kernel.log_variances),
+                    tf.math.exp(self.gaussian_process.likelihood_logvariances),
+                ])
+            gp_mean = session.run(tf.squeeze(self.gaussian_process.compute_posterior_mean(self.system)) * self.system_std_dev + self.system_means)
         tf.reset_default_graph()
-        return theta, gamma, x, mean, gp_vars
+        return theta, gamma, x, gp_vars, gp_mean

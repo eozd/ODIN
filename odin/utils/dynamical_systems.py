@@ -523,3 +523,90 @@ class Lorenz96(DynamicalSystem):
                                                  t_delta_integration,
                                                  t_delta_observation)
         return observed_system, t
+
+
+class Controversy(DynamicalSystem):
+    """
+    Controversy
+    """
+
+    def __init__(self,
+                 true_param: Union[list, np.array] = (2.0,),
+                 noise_variance: float = 0.1 ** 2,
+                 stn_ratio: float = None):
+        """
+        Constructor.
+        :param true_param: true parameters of the system;
+        :param noise_variance: variance of the observation noise, if different
+        from zero it overwrites the signal to noise ratio;
+        :param stn_ratio: signal to noise ratio (variance should be set to zero
+        if the stn_ratio is different than None).
+        """
+        super(Controversy, self).__init__(2,
+                                            true_param,
+                                            noise_variance,
+                                            stn_ratio)
+        assert self.theta.shape[0] == 1,\
+            "Error: length of true_param should be 1"
+        return
+
+    @staticmethod
+    def _system_ode(t: float, y: np.array,
+                    theta: np.array) -> list:
+        """
+        Describes the overall evolution of the system in the form:
+                dy / dt = f( t, y, args)
+        Needed by scipy.
+        :param t: time, needed in arguments even if it's not directly used;
+        :param y: current state;
+        :param theta: arguments and parameters of the system.
+        :return: the f function so built.
+        """
+        f = [y[1], -theta[0]*theta[0]*y[0]]
+        return f
+
+    def simulate(self,
+                 initial_state: Union[list, np.array] = (5.0, 3.0),
+                 initial_time: float = 0.0,
+                 final_time: float = 2.0,
+                 t_delta_integration: float = 0.01)\
+            -> Tuple[np.array, np.array]:
+        """
+        Integrate the system using an scipy built-in ODE solver.
+        :param initial_state: initial state of the system;
+        :param initial_time: initial time of the simulation;
+        :param final_time: final time of the simulation;
+        :param t_delta_integration: time between integration intervals.
+        :return: a numpy array containing the integrated dynamical system (of
+        size [n_states, n_points]) and a numpy array containing the time stamps.
+        """
+        system, t = super(Controversy, self).simulate(initial_state,
+                                                        initial_time,
+                                                        final_time,
+                                                        t_delta_integration)
+        return system, t
+
+    def observe(self, initial_state: Union[list, np.array] = (5.0, 3.0),
+                initial_time: float = 0.0,
+                final_time: float = 2.0,
+                t_delta_integration: float = 0.01,
+                t_delta_observation: float = 0.1) -> Tuple[np.array, np.array]:
+        """
+        Integrate the system using an scipy built-in ODE solver and extract the
+        noisy observations.
+        :param initial_state: initial state of the system;
+        :param initial_time: initial time of the simulation;
+        :param final_time: final time of the simulation;
+        :param t_delta_integration: time between integration intervals;
+        :param t_delta_observation: time between observation intervals.
+        :return: a numpy array containing the noisy observations of the
+        integrated dynamical system (of size [n_states, n_points])
+        and a numpy array containing the time stamps.
+        """
+        observed_system, t = super(Controversy,
+                                   self).observe(initial_state,
+                                                 initial_time,
+                                                 final_time,
+                                                 t_delta_integration,
+                                                 t_delta_observation)
+        return observed_system, t

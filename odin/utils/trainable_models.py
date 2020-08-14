@@ -229,3 +229,35 @@ class TrainableLorenz96(TrainableModel):
         grad_list.append(state_derivative)
         gradients = tf.concat(grad_list, axis=0)
         return gradients
+
+class TrainableControversy(TrainableModel):
+    """
+    Trainable Controversy
+    """
+
+    def _initialize_parameter_variables(self) -> None:
+        """
+        Initialize the TensorFlow variables containing the parameters theta of
+        the ODE system. This will be 1D vector called 'self.theta',
+        tensorflow.Variable type.
+        """
+        self.theta = tf.Variable(tf.abs(tf.random_normal([1, 1],
+                                                         mean=0.0,
+                                                         stddev=1.0,
+                                                         dtype=tf.float64)),
+                                 name='theta',
+                                 trainable=True)
+        return
+
+    def compute_gradients(self, x: tf.Tensor) -> tf.Tensor:
+        """
+        Compute the gradients of the ODE, meaning f(X, self.theta).
+        :param x: values of the time series observed, whose dimensions are
+        [n_states, n_points].
+        :return: TensorFlow Tensor containing the gradients, whose shape is
+        [n_states, n_points].
+        """
+        grad1 = x[1:2, :]
+        grad2 = -self.theta[0] * self.theta[0] * x[0:1, :]
+        gradient_samples = tf.concat([grad1, grad2], 0)
+        return gradient_samples

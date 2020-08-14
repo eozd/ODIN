@@ -8,7 +8,6 @@ February 2019
 
 
 # Import libraries
-import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from odin import FitzHughNagumo
